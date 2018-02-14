@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class Environment:
-    def __init__(self, width, height, min_num_obstacles, max_num_obstacles, minimum_obstacle_distance=5, radius_func=lambda: np.random.rand() * 10, start_pos=(25, 25), snake_len=100, snake_width=2):
+    def __init__(self, width, height, min_num_obstacles, max_num_obstacles, radius_func=lambda: np.random.rand() * 10, start_pos=(25, 25), snake_len=100, snake_width=2):
         self.width = width
         self.height = height
         start_obstacle_radius = 1;
@@ -14,7 +14,7 @@ class Environment:
                 obstacle = Obstacle(width * np.random.rand(), height * np.random.rand(), radius_func())
                 collision = False
                 for obs in self.obstacles:
-                    if obstacle.collides_with(obs, minimum_obstacle_distance):
+                    if obstacle.collides_with(obs, snake_width):
                         collision = True
                         break
                 if not collision:
