@@ -57,7 +57,13 @@ class Triplet:
         obstacles[1] = obstacles[0]
         obstacles[0] = ob
 
-def path_finder(waypoints, init_triplet, env):
+def path_to_wp(wp, init_triplet, env):
+
+
+    return path_segment
+
+
+def path_finder(waypoints, radiuses, init_triplet, env):
     min_dist_wp = 100000000
     index_closest_wp = 0
     start_p = Point(init_triplet.obstacles[0].x, init_triplet.obstacles[0].y)
@@ -67,9 +73,15 @@ def path_finder(waypoints, init_triplet, env):
             min_dist_wp = dist
             index_closest_wp = i
             
+    final_path = init_triplet.obstacles
+    
     for i in range(index_closest_wp,len(waypoints)):
+        final_path.append(path_to_wp(waypoints[i], init_triplet, env))
+        init_triplet = Triplet(final_path[-3:-1])
+
+    return final_path
         
-        
+                        
     
 
 
