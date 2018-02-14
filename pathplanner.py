@@ -51,11 +51,16 @@ class Triplet:
     def __init__(self, obstacles):
         self.obstacles = obstacles
         self.sides = np.array([0,0,0])
+        self.distance_to_next=None
 
     def push_front(self,ob):
-        obstacles[2] = obstacles[1]
-        obstacles[1] = obstacles[0]
-        obstacles[0] = ob
+        self.obstacles[2] = self.obstacles[1]
+        self.obstacles[1] = self.obstacles[0]
+        self.obstacles[0] = ob
+    
+    def quadruplet_distance(self):
+        r = self.obstacles[1].radius
+
 
 def path_finder(waypoints, init_triplet, env):
     min_dist_wp = 100000000
