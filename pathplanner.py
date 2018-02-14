@@ -53,11 +53,12 @@ class Triplet:
         self.sides = np.array([0,0,0])
 
     def push_front(self,ob):
-        obstacles[2] = obstacles[1]
-        obstacles[1] = obstacles[0]
-        obstacles[0] = ob
+        self.obstacles[2] = self.obstacles[1]
+        self.obstacles[1] = self.obstacles[0]
+        self.obstacles[0] = ob
 
 def path_to_wp(wp, init_triplet, env):
+    head = init_triplet.obstacles[0]
 
 
     return path_segment
