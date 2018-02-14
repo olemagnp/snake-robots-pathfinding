@@ -21,7 +21,7 @@ class Obstacle:
     def __init__(self, x, y, radius):
         self.x = x
         self.y = y
-        self.radius = radius
+        self.radius = radius 
     
     def collides_with(self, other, collision_distance):
         return np.sqrt((self.x - other.x) ** 2 + (self.y - other.y) ** 2) < collision_distance + self.radius + other.radius
