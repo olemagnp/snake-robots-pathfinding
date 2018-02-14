@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
 
 class Environment:
     def __init__(self, width, height, min_num_obstacles, max_num_obstacles, radius_func=lambda: np.random.rand() * 10, start_pos=(25, 25), snake_len=100, snake_width=2):
@@ -27,6 +28,14 @@ class Environment:
                 if distance < snake_len:
                     obstacle.neighbours[obstacle2] = distance
                     obstacle2.neighbours[obstacle] = distance
+    
+    def save(self, path):
+        with open(path, 'wb') as f:
+            pickle.dump(self, f)
+    
+    def load(path):
+        with open(path, 'rb') as f:
+            return pickle.load(f)
 
 class Obstacle:
     def __init__(self, x, y, radius):
@@ -59,5 +68,5 @@ def plot_environment(env, snake=None):
     plt.show()
 
 if __name__ == '__main__':
-    env = Environment(200, 200, 20, 50)
+    env = Environment.load("saved.env")
     plot_environment(env)
