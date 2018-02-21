@@ -7,12 +7,12 @@ class Environment:
     def __init__(self, width, height, min_num_obstacles, max_num_obstacles, radius_func=lambda: np.random.rand() * 10, start_pos=(25, 25), snake_len=10, snake_width=2):
         self.width = width
         self.height = height
-        start_obstacle_radius = 1;
+        start_obstacle_radius = 1
         self.obstacles = [Obstacle(start_pos[0] - 2 * start_obstacle_radius - snake_width, start_pos[1], 
                 start_obstacle_radius), Obstacle(start_pos[0], start_pos[1], start_obstacle_radius), 
                 Obstacle(start_pos[0] + 2 * start_obstacle_radius + snake_width, start_pos[1], start_obstacle_radius)]
         self.start_pos = start_pos
-        self.init_triplet = pathplanner.Triplet(self.obstacles[:3][::-1])
+        self.init_triplet = pathplanner.Triplet(self.obstacles[:3])
         self.snake_len = snake_len
         while len(self.obstacles) < min_num_obstacles:
             for _ in range(max_num_obstacles - len(self.obstacles)):
