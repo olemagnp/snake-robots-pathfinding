@@ -10,6 +10,7 @@ class Environment:
         self.obstacles = [Obstacle(start_pos[0] - 2 * start_obstacle_radius - snake_width, start_pos[1], 
                 start_obstacle_radius), Obstacle(start_pos[0], start_pos[1], start_obstacle_radius), 
                 Obstacle(start_pos[0] + 2 * start_obstacle_radius + snake_width, start_pos[1], start_obstacle_radius)]
+        self.start_pos = start_pos
         while len(self.obstacles) < min_num_obstacles:
             for _ in range(max_num_obstacles - len(self.obstacles)):
                 obstacle = Obstacle(width * np.random.rand(), height * np.random.rand(), radius_func())
@@ -56,17 +57,19 @@ class Obstacle:
     def __str__(self):
         return self.__repr__()
 
-def plot_environment(env, snake=None):
+def plot_environment(env, snake=None, fig=None):
+    fig = fig if fig else plt.figure()
     points = np.array([[obs.x, obs.y, (2 * obs.radius) ** 2] for obs in env.obstacles])
-    axes = plt.gca()
+    axes = fig.add_subplot(111)
     lim = max([env.width, env.height])
     axes.set_xlim([0, lim])
     axes.set_ylim([0, lim])
     axes.set_aspect('equal', adjustable='box')
     for obs in env.obstacles:
         axes.add_artist(obs.get_circle())
-    plt.show()
+    return fig
 
 if __name__ == '__main__':
     env = Environment(200, 200, 20, 50)
     plot_environment(env)
+    plt.show()
