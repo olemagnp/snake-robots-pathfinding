@@ -1,6 +1,6 @@
 import numpy as np
 import environment as e
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import math
 from collections import deque
 from heapq import *
@@ -27,9 +27,9 @@ def create_desired_path(env, num_wp):
     points.append(end_p)
     return points
 
-def plot_desired_path(points, env=None):
+def plot_desired_path(points, path=None, env=None):
     if env:
-        fig = e.plot_environment(env)
+        fig = e.plot_environment(env, path=path)
         ax = fig.gca()
         ax.set_xlim([0, env.width])
         ax.set_ylim([0, env.height])
@@ -41,8 +41,8 @@ def plot_desired_path(points, env=None):
     for p in points:
         x.append(p.x)
         y.append(p.y)
-    ax.plot(x,y,'g')
-    plt.pyplot.show()
+    ax.plot(x,y,'go-')
+    plt.show()
 
 
 class Point:
@@ -52,13 +52,19 @@ class Point:
         self.distance = None
 
     def distance_to(self, p):
-        return sqrt((self.x- p.x)^2 + (self.y-p.y)^2)
+        return np.sqrt((self.x- p.x) ** 2 + (self.y-p.y) ** 2)
+    
+    def __repr__(self):
+        return "Point(%.2f, %.2f)" % (self.x, self.y)
+    
+    def __str__(self):
+        return self.__repr__()
     
 
 class Triplet:
     def __init__(self, obstacles):
         self.obstacles = obstacles
-        self.sides = np.array([0,0,0])
+        self.sides = 0
         self.cost = 0
         self.parent = None
 
@@ -73,7 +79,7 @@ class Triplet:
         return trip
     
     def __eq__(self, o):
-        return self.sides == o.sides and self.obstacles == o.obstacles
+        return self.sides == o.sides and np.all(self.obstacles == o.obstacles)
     
     def __lt__(self, o):
         return self.cost < o.cost
@@ -81,22 +87,41 @@ class Triplet:
     def __le__(self, o):
         return self.cost <= o.cost
     
-    def quadruplet_distance(self, obs_list):
-        raise NotImplementedError()
+    def quadruplet_distance(self, obs_dict, snake_len):
+        point0 = Point(self.obstacles[0].x, self.obstacles[0].y)
+        point1 = Point(self.obstacles[1].x, self.obstacles[1].y)
+        point2 = Point(self.obstacles[2].x, self.obstacles[2].y)
 
-def cost_to_move(current_wp, next_wp, current_triplet, next_obstacle):
-    cost = distance_to_path(next_obstacle, current_wp, next_wp)
-    # cost += Point(obstacles[0].x, obstacles[0].y).distance_to(Point(next_obstacle.x, next_obstacle.y))
+        snake_left = snake_len - point0.distance_to(point1) - point1.distance_to(point2)
+        reachable_pts = {}
+        for obstacle, distance in obs_dict.items():
+            if snake_left >= distance:
+                reachable_pts[obstacle] = distance
+        return reachable_pts
+
+
+def cost_to_move(current_wp, next_wp, current_triplet, next_obstacle, distance):
+    cost = 0
+    # cost = distance_to_path(next_obstacle, current_wp, next_wp)
+    cost += next_wp.distance_to(Point(next_obstacle.x, next_obstacle.y))
+    # cost += distance
     return cost
 
 def distance_to_path(obstacle, wp1, wp2):
-    return np.abs((wp2.y - wp1.y) * obstacle.x - (wp2.x - wp1.x) * obstacle.y) + wp2.x * wp1.y - wp2.y * wp1.x) / wp1.distance_to(wp2)
+    return np.abs((wp2.y - wp1.y) * obstacle.x - (wp2.x - wp1.x) * obstacle.y + wp2.x * wp1.y - wp2.y * wp1.x) / wp1.distance_to(wp2)
 
-def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2):
+def path(previous_wp, wp, init_triplet, env, max_dist=2):
+    # previous_wp = input_path[0]
+    # wp = input_path[1]
+    # print(previous_wp)
+    # print(wp)
+    wp_index = 2
     visited = []
     seen = []
     queue = []
-    heappush(heap, init_triplet)
+    heappush(queue, init_triplet)
+    print(previous_wp)
+    print(wp)
     current = None
     found = False
     while queue:
@@ -107,15 +132,26 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2):
         if wp.distance_to(Point(current.obstacles[0].x, current.obstacles[0].y)) < max_dist:
             found = True
             break
-        possibilities = current.quadruplet_distance(current.obstacles[0].neighbours)
-        for obstacle in possibilities:
+            # print('a')
+            # if wp_index == len(input_path):
+            #     found = True
+            #     break
+            # previous_wp = wp
+            # wp = input_path[wp_index]
+            # wp_index += 1
+            # print(previous_wp)
+            # print(wp)
+            # found = True
+            # break
+        possibilities = current.quadruplet_distance(current.obstacles[0].neighbours, env.snake_len)
+        for obstacle, distance in possibilities.items():
             triplet = current.get_next_triplet(obstacle)
-            cost = current.cost + cost_to_move(previous_wp, wp, current, obstacle)
+            cost = current.cost + cost_to_move(previous_wp, wp, current, obstacle, distance)
             if triplet not in seen:
                 seen.append(triplet)
                 triplet.cost = cost
                 heappush(queue, triplet)
-            else if triplet.cost < cost:
+            elif triplet.cost < cost:
                 triplet.cost = cost
                 heapify(queue)
     if not found:
@@ -125,7 +161,7 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2):
     while current.parent is not None:
         current = current.parent
         path.appendleft(current)
-    return path
+    return path, visited
 
 
 def path_finder(waypoints, radiuses, init_triplet, env):
@@ -145,14 +181,22 @@ def path_finder(waypoints, radiuses, init_triplet, env):
         init_triplet = Triplet(final_path[-3:-1])
     return final_path
 
+def plot_visited(env, visited):
+    plt.ion()
+    fig = e.plot_environment(env)
+    axes = fig.gca()
+    for i in range(len(visited)):
+        e.plot_environment(env, fig=fig)
+        for obstacle in visited[i].obstacles:
+            axes.add_artist(obstacle.get_circle('b'))
+        plt.draw()
+        input()
+    plt.ioff()
+
 if __name__ == "__main__":
-    env = e.Environment(200,200,100,150, radius_func=lambda: np.random.rand() * 3 + 1)
-    points = create_desired_path(env,10)
-    plot_desired_path(points, env)
-
-
-
-    
-    
-
-    
+    env = e.Environment(200,200,200,500, radius_func=lambda: np.random.rand() * 3 + 1, snake_len=50)
+    points = create_desired_path(env,3)
+    path, visited = path(points[0], points[1], env.init_triplet, env, 25)
+    plot_desired_path(points, list(path)[:10], env)
+    print("Found path")
+    plot_visited(env, visited)

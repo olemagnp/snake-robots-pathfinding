@@ -1,9 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
+import pathplanner
 
 class Environment:
-    def __init__(self, width, height, min_num_obstacles, max_num_obstacles, radius_func=lambda: np.random.rand() * 10, start_pos=(25, 25), snake_len=100, snake_width=2):
+    def __init__(self, width, height, min_num_obstacles, max_num_obstacles, radius_func=lambda: np.random.rand() * 10, start_pos=(25, 25), snake_len=10, snake_width=2):
         self.width = width
         self.height = height
         start_obstacle_radius = 1;
@@ -11,6 +12,8 @@ class Environment:
                 start_obstacle_radius), Obstacle(start_pos[0], start_pos[1], start_obstacle_radius), 
                 Obstacle(start_pos[0] + 2 * start_obstacle_radius + snake_width, start_pos[1], start_obstacle_radius)]
         self.start_pos = start_pos
+        self.init_triplet = pathplanner.Triplet(self.obstacles[:3][::-1])
+        self.snake_len = snake_len
         while len(self.obstacles) < min_num_obstacles:
             for _ in range(max_num_obstacles - len(self.obstacles)):
                 obstacle = Obstacle(width * np.random.rand(), height * np.random.rand(), radius_func())
@@ -57,7 +60,7 @@ class Obstacle:
     def __str__(self):
         return self.__repr__()
 
-def plot_environment(env, snake=None, fig=None):
+def plot_environment(env, path=None, snake=None, fig=None):
     fig = fig if fig else plt.figure()
     points = np.array([[obs.x, obs.y, (2 * obs.radius) ** 2] for obs in env.obstacles])
     axes = fig.add_subplot(111)
@@ -67,6 +70,19 @@ def plot_environment(env, snake=None, fig=None):
     axes.set_aspect('equal', adjustable='box')
     for obs in env.obstacles:
         axes.add_artist(obs.get_circle())
+    if path is not None:
+        path = list(path)
+        path_x = []
+        path_y = []
+        for obstacle in path[0].obstacles:
+            axes.add_artist(obstacle.get_circle(color='b'))
+            path_x.append(obstacle.x)
+            path_y.append(obstacle.y)
+        for triplet in path[1:]:
+            axes.add_artist(triplet.obstacles[0].get_circle(color='b'))
+            path_x.append(triplet.obstacles[0].x)
+            path_y.append(triplet.obstacles[0].y)
+        axes.plot(path_x, path_y, 'b')
     return fig
 
 if __name__ == '__main__':
