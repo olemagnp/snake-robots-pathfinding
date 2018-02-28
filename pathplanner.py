@@ -128,7 +128,7 @@ def length_of_three_lines(lines, radii, s):  # s is side
         # Then it finds the distances from the endpoints to the point on the arch, and adds these to the path_length. Then it subtracts the length of the tangent lines from
         # path_length, as these are added earlier in the code. (See picture on google drive)
         path_length += np.sqrt((radii[1] * (1 - np.cos(theta[0]/2))) ** 2 + (lines[0].length - radii[1]*np.sin(theta[0]/2)) ** 2)
-        path_length += np.sqrt(radii[1]*np.cos(theta[0])+lines[1].length*np.cos(theta[0]-np.pi/2)-radii[1]*np.cos(theta[0]/2) ** 2 + (radii[1]*np.sin(theta[0]+lines[1].length*np.sin(theta[0]-np.pi/2)-radii[0]*np.sin(theta[0]/2)) ** 2))
+        path_length += np.sqrt((radii[1]*np.cos(theta[0]) + lines[1].length*np.cos(theta[0]-np.pi/2)-radii[1]*np.cos(theta[0]/2)) ** 2 + (radii[1]*np.sin(theta[0]+lines[1].length*np.sin(theta[0]-np.pi/2)-radii[0]*np.sin(theta[0]/2)) ** 2))
         path_length -= (lines[0].length + lines[1].length)
 
     # Second triplet:
