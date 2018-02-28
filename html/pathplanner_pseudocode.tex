@@ -1,0 +1,47 @@
+
+% This LaTeX was auto-generated from MATLAB code.
+% To make changes, update the MATLAB code and republish this document.
+
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{color}
+
+\sloppy
+\definecolor{lightgray}{gray}{0.5}
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+    
+    \begin{verbatim}
+function path_finder(waypoints, init_triplet, environment, max_dist)
+    % List of triplets used to get from A to B, along the waypoints 
+    % in the desired path
+    final_path = []    
+    % Go through each line segment that the waypoints constitute
+    for i in range(1,len(waypoints)):
+       % Find the triplets that give the shortest path
+       final_path.extend(path_to_wp(waypoints[i-1], waypoints[i], init_triplet, env)
+    end
+    return final_path
+
+function path_to_wp(previous_wp, wp, init_triplet, environment, max_dist)
+    % Deque of triplets used to get the snake from the previous waypoint
+    % to the next waypoint
+    path = deque()   
+    path.insert(init_triplet)
+    current_triplet = init_triplet
+    while(distance_to_wp(snake_head, wp) > max_dist)
+        % Use A*-search to iteratively find the next obstacles used in 
+        % the locomotion, and insert them into the next triplet. A*-search 
+        % here returns the next triplet.
+        current_triplet = A*-search(current_triplet, previous_wp, wp, environment)
+        path.insert(current_triplet)
+    return list(path)
+\end{verbatim}
+
+    
+
+
+\end{document}
+    
