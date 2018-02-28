@@ -202,7 +202,7 @@ def plot_visited(env, visited):
     plt.ioff()
 
 if __name__ == "__main__":
-    env = e.Environment(200,200,200,500, radius_func=lambda: np.random.rand() * 3 + 1, snake_len=50)
+    env = e.Environment(200,200,200,300, radius_func=lambda: np.random.rand() * 3 + 1, snake_len=50)
     points = create_desired_path(env,3)
     path = path_finder(points, None, env.init_triplet, env, 15)
     plot_desired_path(points, path, env)
