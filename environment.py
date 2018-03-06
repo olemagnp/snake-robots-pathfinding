@@ -79,9 +79,9 @@ def plot_environment(env, path=None, snake=None, fig=None):
             path_x.append(obstacle.x)
             path_y.append(obstacle.y)
         for triplet in path[1:]:
-            axes.add_artist(triplet.obstacles[0].get_circle(color='b'))
-            path_x.append(triplet.obstacles[0].x)
-            path_y.append(triplet.obstacles[0].y)
+            axes.add_artist(triplet.obstacles[2].get_circle(color='b'))
+            path_x.append(triplet.obstacles[2].x)
+            path_y.append(triplet.obstacles[2].y)
         axes.plot(path_x, path_y, 'b')
     return fig
 
