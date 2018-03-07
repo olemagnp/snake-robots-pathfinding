@@ -60,13 +60,12 @@ class Line:
     def __str__(self):
         return self.__repr__()
 
-    
 
 class Triplet:
     def __init__(self, obstacles):
         self.obstacles = obstacles
-        self.side = 0                   ### side = 0 - snake is right of object 3.
-                                        ### side = 1 - snake is left of object 3.
+        self.side = 0                   ### side = 0 - snake is right of object[2].
+                                        ### side = 1 - snake is left of object[2].
         self.distance_to_next=None
 
     def push_front(self, ob):
@@ -118,27 +117,28 @@ def length_of_three_lines(lines, radii, s):  # s is side
     for line in lines:
         path_length += line.length
 
+    pl = [path_length, 0, 0]
+
     theta = [lines[0].angle_to_line(lines[1]), lines[1].angle_to_line(lines[2])]
 
-    # First triplet:
-    if (theta[0] <= 0) == (s == 0):  # OUTSIDE
-        path_length += radii[1]*abs(theta[0])
-    else:  # INSIDE
-        # This code finds a point on the middle of the arch between the points where the two tangent lines intersects with the circle.
-        # Then it finds the distances from the endpoints to the point on the arch, and adds these to the path_length. Then it subtracts the length of the tangent lines from
-        # path_length, as these are added earlier in the code. (See picture on google drive)
-        path_length += np.sqrt((radii[1] * (1 - np.cos(theta[0]/2))) ** 2 + (lines[0].length - radii[1]*np.sin(theta[0]/2)) ** 2)
-        path_length += np.sqrt((radii[1]*np.cos(theta[0]) + lines[1].length*np.cos(theta[0]-np.pi/2)-radii[1]*np.cos(theta[0]/2)) ** 2 + (radii[1]*np.sin(theta[0]+lines[1].length*np.sin(theta[0]-np.pi/2)-radii[0]*np.sin(theta[0]/2)) ** 2))
-        path_length -= (lines[0].length + lines[1].length)
+    for i in range(2):
 
-    # Second triplet:
-    if (theta[1] <= 0) == (((s+1) % 2) == 0):  # OUTSIDE
-        path_length += radii[2]*abs(theta[1])
-    else:  # INSIDE
-        # Same as a above, with the next index.
-        path_length += np.sqrt((radii[2] * (1 - np.cos(theta[1] / 2))) ** 2 + (lines[1].length - radii[2] * np.sin(theta[1] / 2)) ** 2)
-        path_length += np.sqrt((radii[2] * np.cos(theta[1]) + lines[2].length * np.cos(theta[1] - np.pi / 2) - radii[2] * np.cos(theta[1] / 2)) ** 2 + (radii[2] * np.sin(theta[1]) + lines[2].length * np.sin(theta[1] - np.pi / 2) - radii[1] * np.sin(theta[1] / 2)) ** 2)
-        path_length -= (lines[1].length + lines[2].length)
+        if (theta[i] <= 0) == (((s+i) % 2) == 0):  # OUTSIDE
+            print("outside")
+            path_length += radii[i+1]*abs(theta[i])
+        else:  # INSIDE
+            print("inside")
+            # This code finds a point on the middle of the arch between the points where the two tangent lines intersects with the circle.
+            # Then it finds the distances from the endpoints to the point on the arch, and adds these to the path_length. Then it subtracts the length of the tangent lines from
+            # path_length, as these are added earlier in the code. (See picture on google drive)
+            path_length += np.sqrt((radii[i+1] * (1 - np.cos(theta[i]/2))) ** 2 + (lines[i].length - radii[i+1]*np.sin(theta[i]/2)) ** 2)
+            print(np.sqrt((radii[i+1] * (1 - np.cos(theta[i] / 2))) ** 2 + (lines[i].length - radii[i+1] * np.sin(theta[i] / 2)) ** 2))
+            path_length += np.sqrt((radii[i+1]*np.cos(theta[i]) + lines[i+1].length*np.cos(theta[i]-np.pi/2)-radii[i+1]*np.cos(theta[i]/2)) ** 2 + (radii[i+1]*np.sin(theta[i]+lines[i+1].length*np.sin(theta[i]-np.pi/2)-radii[i]*np.sin(theta[i]/2)) ** 2))
+            print(np.sqrt((radii[i+1]*np.cos(theta[i]) + lines[i+1].length*np.cos(theta[i]-np.pi/2)-radii[i+1]*np.cos(theta[i]/2)) ** 2 + (radii[i+1]*np.sin(theta[i]+lines[i+1].length*np.sin(theta[i]-np.pi/2)-radii[i]*np.sin(theta[i]/2)) ** 2)))
+            path_length -= (lines[i].length + lines[i+1].length)
+        pl[i+1] = path_length
+
+    print("Path lengths:", pl)
 
     return path_length
 
@@ -153,31 +153,31 @@ def path_finder(waypoints, init_triplet, env):
             min_dist_wp = dist
             index_closest_wp = i
             
-    for i in range(index_closest_wp,len(waypoints)):
+    for i in range(index_closest_wp, len(waypoints)):
         continue
-        
-        
-    
-
 
 if __name__ == "__main__":
-    env = e.Environment(200, 50, 20, 50)
+    env = e.Environment(200, 200, 100, 150)
+    # e.plot_environment(env)
 
     points = create_desired_path(env, 10)
     # plot_desired_path(points)
 
-    ob1 = e.Obstacle(21, 26, 1)
-    ob2 = e.Obstacle(25, 24, 1)
-    ob3 = e.Obstacle(29, 26, 1)
+    ob1 = e.Obstacle(10, 11, 1)
+    ob2 = e.Obstacle(15.707, 9.293, 1)
+    ob3 = e.Obstacle(14.293, 15.707, 1)
     trip = Triplet([ob1, ob2, ob3])
-    ob4 = e.Obstacle(25, 35, 5)
+    ob4 = e.Obstacle(20, 14, 1)
 
-    print(trip.quadruplet_distance([ob4], 30))
+    print(trip.quadruplet_distance([ob4], 70))
 
+    """
+    trip = Triplet(env.obstacles[0:3])
+    trip.side = 0
 
+    print(trip.quadruplet_distance(env.obstacles[3].neighbours, 50))
 
+    trip.side = 1
 
-    
-    
-
-    
+    print(trip.quadruplet_distance(env.obstacles[3].neighbours, 50))
+    """

@@ -59,14 +59,13 @@ class Obstacle:
 def plot_environment(env, snake=None):
     points = np.array([[obs.x, obs.y, (2 * obs.radius) ** 2] for obs in env.obstacles])
     axes = plt.gca()
-    lim = max([env.width, env.height])
-    axes.set_xlim([0, lim])
-    axes.set_ylim([0, lim])
+    axes.set_xlim([0, env.width])
+    axes.set_ylim([0, env.height])
     axes.set_aspect('equal', adjustable='box')
     for obs in env.obstacles:
         axes.add_artist(obs.get_circle())
     plt.show()
 
 if __name__ == '__main__':
-    env = Environment(200, 200, 20, 50)
+    env = Environment(200, 100, 20, 50)
     plot_environment(env)
