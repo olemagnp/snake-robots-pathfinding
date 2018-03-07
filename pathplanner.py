@@ -121,7 +121,24 @@ def heuristic_cost(wp, obstacle):
 def distance_to_path(obstacle, wp1, wp2):
     return np.abs((wp2.y - wp1.y) * obstacle.x - (wp2.x - wp1.x) * obstacle.y + wp2.x * wp1.y - wp2.y * wp1.x) / wp1.distance_to(wp2)
 
-def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2):
+def filter_queue(queue, newObstacle, prevObstacle):
+    for triplet in queue:
+        parent = triplet.parent
+        while parent.obstacles[0] != prevObstacle:
+            parent = parent.parent
+        if parent.obstacles[1] != newObstacle:
+            heappop(triplet)
+
+    heapify(queue)
+    return queue
+
+def new_active(endObstacle, activeObstacle):
+    parent = endObstacle.parent
+    while parent.parent != activeObstacle:
+        parent = parent.parent
+    return parent
+
+def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, scope_range=20):
     """
     This implements a simple A*-search, using the cost_to_move()
     and heuristic_cost() functions to find g and h values, respectively.
@@ -134,6 +151,7 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2):
     heappush(queue, init_triplet)
     current = None
     found = False
+    active = init_triplet.obstacles[2]
     while queue:
         parent = current
         current = heappop(queue)
@@ -143,6 +161,11 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2):
         if wp.distance_to(Point(current.obstacles[0].x, current.obstacles[0].y)) < max_dist:
             found = True
             break
+        if active.distance_to(current) > scope_range:
+            previous_active = active
+            active = new_active(current, active)
+            filter_queue(queue, active, previous_active)
+
         possibilities = current.quadruplet_distance(current.obstacles[0].neighbours, env.snake_len)
         for obstacle, distance in possibilities.items():
             triplet = current.get_next_triplet(obstacle)

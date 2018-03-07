@@ -53,6 +53,8 @@ class Obstacle:
     
     def get_circle(self, color='r'):
         return plt.Circle((self.x, self.y), self.radius, color=color)
+    def distance_to(self, ob):
+        return np.sqrt((self.x - ob.x)**2 + (self.y - ob.y)**2)
     
     def __repr__(self):
         return "Obstacle[x=%.2f, y=%.2f, radius=%.2f]" % (self.x, self.y, self.radius)
