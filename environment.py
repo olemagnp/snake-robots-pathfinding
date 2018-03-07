@@ -86,6 +86,6 @@ def plot_environment(env, path=None, snake=None, fig=None):
     return fig
 
 if __name__ == '__main__':
-    env = Environment(200, 200, 20, 50)
+    env = Environment(200, 100, 20, 50)
     plot_environment(env)
     plt.show()
