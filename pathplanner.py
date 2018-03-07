@@ -106,17 +106,19 @@ class Triplet:
                                         ### side = 1 - snake is left of object 3.
         self.distance_to_next=None
     
-    def quadruplet_distance(self, neighbours, snake_length):
-        # point2 = Point(self.obstacles[0].x, self.obstacles[0].y)
-        # point1 = Point(self.obstacles[1].x, self.obstacles[1].y)
-        # point0 = Point(self.obstacles[2].x, self.obstacles[2].y)
+    def quadruplet_distance_stupid(self, neighbours, snake_length):
+        point2 = Point(self.obstacles[0].x, self.obstacles[0].y)
+        point1 = Point(self.obstacles[1].x, self.obstacles[1].y)
+        point0 = Point(self.obstacles[2].x, self.obstacles[2].y)
 
-        # snake_left = snake_length - point0.distance_to(point1) - point1.distance_to(point2)
-        # reachable_pts = {}
-        # for obstacle, distance in neighbours.items():
-        #     if snake_left >= distance:
-        #         reachable_pts[obstacle] = distance
-        # return reachable_pts
+        snake_left = snake_length - point0.distance_to(point1) - point1.distance_to(point2)
+        reachable_pts = {}
+        for obstacle, distance in neighbours.items():
+            if snake_left >= distance:
+                reachable_pts[obstacle] = distance
+        return reachable_pts
+
+    def quadruplet_distance(self, neighbours, snake_length):
         tangent_lines = []
 
         for i in range(2):
@@ -185,6 +187,7 @@ def length_of_three_lines(lines, radii, s):  # s is side
 def cost_to_move(current_wp, next_wp, current_triplet, next_obstacle, distance):
     cost = 0
     cost += distance
+    # cost += Point(next_obstacle.x, next_obstacle.y).distance_to(Point(current_triplet.obstacles[2].x, current_triplet.obstacles[2].y))
     return cost
 
 def heuristic_cost(wp, obstacle):
@@ -203,7 +206,7 @@ def create_path(final_node):
         path.appendleft(current)
     return list(path)
 
-def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None):
+def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbour_func=lambda c, n, s: c.quadruplet_distance(n, s)):
     """
     This implements a simple A*-search, using the cost_to_move()
     and heuristic_cost() functions to find g and h values, respectively.
@@ -229,7 +232,7 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None):
         if wp.distance_to(Point(current.obstacles[2].x, current.obstacles[2].y)) < max_dist:
             found = True
             break
-        possibilities = current.quadruplet_distance(current.obstacles[2].neighbours, env.snake_len)
+        possibilities = neighbour_func(current, current.obstacles[2].neighbours, env.snake_len)
         for obstacle, distance in possibilities.items():
             triplet = current.get_next_triplet(obstacle)
             if triplet in visited:
@@ -258,7 +261,7 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None):
     plt.ioff()
     return current
 
-def path_finder(waypoints, radiuses, init_triplet, env, max_dist=15):
+def path_finder(waypoints, radiuses, init_triplet, env, max_dist=15, neighbour_func=lambda c, n, s: c.quadruplet_distance(n, s)):
     min_dist_wp = 100000000
     index_closest_wp = 0
     start_p = Point(init_triplet.obstacles[0].x, init_triplet.obstacles[0].y)
@@ -273,7 +276,7 @@ def path_finder(waypoints, radiuses, init_triplet, env, max_dist=15):
     final_triplet = env.init_triplet
     final_path = [init_triplet]
     for i in range(1,len(waypoints)):
-        final_triplet = path_to_wp(waypoints[i-1], waypoints[i], final_triplet, env, max_dist, fig)
+        final_triplet = path_to_wp(waypoints[i-1], waypoints[i], final_triplet, env, max_dist, fig, neighbour_func)
     return create_path(final_triplet)
 
 def plot_visited(env, visited):
@@ -291,8 +294,11 @@ def plot_visited(env, visited):
 if __name__ == "__main__":
     env = e.Environment(200,200,150,300, radius_func=lambda: np.random.rand() * 3 + 1, snake_len=50)
     points = create_desired_path(env,3)
-    path = path_finder(points, None, env.init_triplet, env, 10)
-    plot_desired_path(points, path, env, plt.figure())
+    path2 = path_finder(points, None, env.init_triplet, env, 10, lambda c, n, s: c.quadruplet_distance_stupid(n, s))
+    try:
+        path = path_finder(points, None, env.init_triplet, env, 10)
+    except ValueError:
+        pass
     print("Found path")
     # plot_visited(env, visited)
     # plot_desired_path(points, env=env)
