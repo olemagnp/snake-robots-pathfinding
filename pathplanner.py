@@ -124,21 +124,16 @@ def length_of_three_lines(lines, radii, s):  # s is side
     for i in range(2):
 
         if (theta[i] <= 0) == (((s+i) % 2) == 0):  # OUTSIDE
-            print("outside")
             path_length += radii[i+1]*abs(theta[i])
         else:  # INSIDE
-            print("inside")
+            theta[i] = abs(theta[i])
             # This code finds a point on the middle of the arch between the points where the two tangent lines intersects with the circle.
             # Then it finds the distances from the endpoints to the point on the arch, and adds these to the path_length. Then it subtracts the length of the tangent lines from
             # path_length, as these are added earlier in the code. (See picture on google drive)
-            path_length += np.sqrt((radii[i+1] * (1 - np.cos(theta[i]/2))) ** 2 + (lines[i].length - radii[i+1]*np.sin(theta[i]/2)) ** 2)
-            print(np.sqrt((radii[i+1] * (1 - np.cos(theta[i] / 2))) ** 2 + (lines[i].length - radii[i+1] * np.sin(theta[i] / 2)) ** 2))
-            path_length += np.sqrt((radii[i+1]*np.cos(theta[i]) + lines[i+1].length*np.cos(theta[i]-np.pi/2)-radii[i+1]*np.cos(theta[i]/2)) ** 2 + (radii[i+1]*np.sin(theta[i]+lines[i+1].length*np.sin(theta[i]-np.pi/2)-radii[i]*np.sin(theta[i]/2)) ** 2))
-            print(np.sqrt((radii[i+1]*np.cos(theta[i]) + lines[i+1].length*np.cos(theta[i]-np.pi/2)-radii[i+1]*np.cos(theta[i]/2)) ** 2 + (radii[i+1]*np.sin(theta[i]+lines[i+1].length*np.sin(theta[i]-np.pi/2)-radii[i]*np.sin(theta[i]/2)) ** 2)))
-            path_length -= (lines[i].length + lines[i+1].length)
+            a = np.sqrt((radii[i+1] * (1 - np.cos(theta[i]/2))) ** 2 + (lines[i].length - radii[i+1]*np.sin(theta[i]/2)) ** 2)
+            b = np.sqrt((radii[i+1]*np.cos(theta[i]) + lines[i+1].length*np.cos(theta[i]-np.pi/2)-radii[i+1]*np.cos(theta[i]/2)) ** 2 + (radii[i+1]*np.sin(theta[i]+lines[i+1].length*np.sin(theta[i])-np.pi/2)-radii[i]*np.sin(theta[i]/2)) ** 2)
+            path_length += (a+b) - (lines[i].length + lines[i+1].length)
         pl[i+1] = path_length
-
-    print("Path lengths:", pl)
 
     return path_length
 
