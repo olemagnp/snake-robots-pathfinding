@@ -324,14 +324,13 @@ def path_finder(waypoints, radiuses, init_triplet, env, max_dist=15, neighbour_f
         if(dist < min_dist_wp):
             min_dist_wp = dist
             index_closest_wp = i
-    plt.pause(3)
-    time.sleep(3)
     init_triplet=env.init_triplet
     fig = plt.figure()
     final_triplet = env.init_triplet
     final_path = [init_triplet]
     for i in range(1,len(waypoints)):
         final_triplet = path_to_wp(waypoints[i-1], waypoints[i], final_triplet, env, max_dist, fig, neighbour_func)
+    time.sleep(10)
     return create_path(final_triplet)
 
 def plot_visited(env, visited):
