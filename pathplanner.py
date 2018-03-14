@@ -200,7 +200,7 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, scope_range=70):
                     triplet.cost = cost
             heapify(queue)
     if not found:
-        raise ValueError("No path found!")
+        print("No path found")
     # Build path from parentage
     path = deque()
     path.appendleft(current)
