@@ -134,6 +134,7 @@ class Triplet:
 
             tangent_lines.append([Line(tangent_length, center_theta - theta_difference), Line(tangent_length, center_theta + theta_difference)])
 
+        cur_triplet_dist = triplet_distance([tangent_lines[0][(self.side+1)%2], tangent_lines[1][self.side]], self.obstacles[1].radius, self.side)
         ob_dict = {}
 
         for ob in neighbours:
@@ -148,14 +149,49 @@ class Triplet:
             theta_difference = np.arcsin(summed_radius_neigh / center_distance)
             tangent_lines_neigh = ([Line(tangent_length, center_theta - theta_difference), Line(tangent_length, center_theta + theta_difference)])
 
-            s = self.side
-            lines = [tangent_lines[0][(s+1)%2], tangent_lines[1][s], tangent_lines_neigh[(s+1)%2]]
-            radii = [self.obstacles[0].radius, self.obstacles[1].radius, self.obstacles[2].radius, ob.radius]
-            path_length = length_of_three_lines(lines, radii, s)
+            lines = [tangent_lines[1][self.side], tangent_lines_neigh[(self.side+1)%2]]
+            radius = self.obstacles[2].radius
+            obstacle_distance = added_distance(lines, radius, self.side)
 
-            if path_length < snake_length:
-                ob_dict[ob] = path_length
+            if cur_triplet_dist + obstacle_distance < snake_length:
+                ob_dict[ob] = obstacle_distance
         return ob_dict  # dictionary of {Obstacle: required snake length}
+
+def triplet_distance(lines, radius, s):
+    path_length = 0
+    for line in lines:
+        path_length += line.length
+
+    theta = lines[0].angle_to_line(lines[1])
+    if (theta <= 0) == ((s % 2) == 0):  # OUTSIDE
+        path_length += radius*abs(theta)
+    else:  # INSIDE
+        theta = abs(theta)
+        # This code finds a point on the middle of the arch between the points where the two tangent lines intersects with the circle.
+        # Then it finds the distances from the endpoints to the point on the arch, and adds these to the path_length. Then it subtracts the length of the tangent lines from
+        # path_length, as these are added earlier in the code. (See picture on google drive)
+        a = np.sqrt((radius * (1 - np.cos(theta/2))) ** 2 + (lines[0].length - radius*np.sin(theta/2)) ** 2)
+        b = np.sqrt((radius*np.cos(theta) + lines[1].length*np.cos(theta-np.pi/2)-radius*np.cos(theta/2)) ** 2 + (radius*np.sin(theta)+lines[1].length*np.sin(theta-np.pi/2)-radius*np.sin(theta/2)) ** 2)
+        path_length += (a+b) - (lines[0].length + lines[1].length)
+
+    return path_length
+
+def added_distance(lines, radius, s):
+    path_length = lines[-1].length
+
+    theta = lines[0].angle_to_line(lines[1])
+    if (theta <= 0) == ((s % 2) == 0):  # OUTSIDE
+        path_length += radius*abs(theta)
+    else:  # INSIDE
+        theta = abs(theta)
+        # This code finds a point on the middle of the arch between the points where the two tangent lines intersects with the circle.
+        # Then it finds the distances from the endpoints to the point on the arch, and adds these to the path_length. Then it subtracts the length of the tangent lines from
+        # path_length, as these are added earlier in the code. (See picture on google drive)
+        a = np.sqrt((radius * (1 - np.cos(theta/2))) ** 2 + (lines[0].length - radius*np.sin(theta/2)) ** 2)
+        b = np.sqrt((radius*np.cos(theta) + lines[1].length*np.cos(theta-np.pi/2)-radius*np.cos(theta/2)) ** 2 + (radius*np.sin(theta)+lines[1].length*np.sin(theta-np.pi/2)-radius*np.sin(theta/2)) ** 2)
+        path_length += (a+b) - (lines[0].length + lines[1].length)
+
+    return path_length
 
 def find_start_end_points(goal_ob, tangent, side):
     radial_theta = line.angle + math.pi/2 if side == 1 else line.angle - math.pi/2
@@ -165,31 +201,6 @@ def find_start_end_points(goal_ob, tangent, side):
     start_x = end_x - line.length * np.cos(line.angle)
     start_y = end_y - line.length * np.sin(line.angle)
     return Point(start_x, start_y), Point(end_x, end_y)
-
-def length_of_three_lines(lines, radii, s):  # s is side
-    path_length = 0
-    for line in lines:
-        path_length += line.length
-
-    pl = [path_length, 0, 0]
-
-    theta = [lines[0].angle_to_line(lines[1]), lines[1].angle_to_line(lines[2])]
-
-    for i in range(2):
-
-        if (theta[i] <= 0) == (((s+i) % 2) == 0):  # OUTSIDE
-            path_length += radii[i+1]*abs(theta[i])
-        else:  # INSIDE
-            theta[i] = abs(theta[i])
-            # This code finds a point on the middle of the arch between the points where the two tangent lines intersects with the circle.
-            # Then it finds the distances from the endpoints to the point on the arch, and adds these to the path_length. Then it subtracts the length of the tangent lines from
-            # path_length, as these are added earlier in the code. (See picture on google drive)
-            a = np.sqrt((radii[i+1] * (1 - np.cos(theta[i]/2))) ** 2 + (lines[i].length - radii[i+1]*np.sin(theta[i]/2)) ** 2)
-            b = np.sqrt((radii[i+1]*np.cos(theta[i]) + lines[i+1].length*np.cos(theta[i]-np.pi/2)-radii[i+1]*np.cos(theta[i]/2)) ** 2 + (radii[i+1]*np.sin(theta[i])+lines[i+1].length*np.sin(theta[i]-np.pi/2)-radii[i]*np.sin(theta[i]/2)) ** 2)
-            path_length += (a+b) - (lines[i].length + lines[i+1].length)
-        pl[i+1] = path_length
-
-    return path_length
 
 def cost_to_move(current_wp, next_wp, current_triplet, next_obstacle, distance):
     cost = 0
@@ -311,4 +322,5 @@ if __name__ == "__main__":
         plt.show()
         pass
     print("Found path")
+    input()
     # plot_visited(env, visited)
