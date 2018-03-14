@@ -86,6 +86,7 @@ class Triplet:
         self.cost = 0 # Actual cost to move to this obstacle 
         self.h = 0 # Heuristic cost left to the goal
         self.parent = None
+        self.deadend = []
 
     def push_front(self,ob):
         self.obstacles[0] = self.obstacles[1]
@@ -220,15 +221,16 @@ def filter_queue(queue, newActive, prevActive):
     newqueue = []  # Open set
     while queue:
         triplet = heappop(queue)
-        parent = triplet
+        current = triplet
         "Follow the triplets parents until you reach the previously active node"
         try:
-            while parent.parent.obstacles[0] != prevActive:
-                parent = parent.parent
+            while current.parent.obstacles[2] != prevActive:
+                current = current.parent
+
         except AttributeError:
-                print("Failed to find parent")
+                ""
         "Is the new active in the path?"
-        if parent.obstacles[0] == newActive:
+        if current.obstacles[2] == newActive:
             heappush(newqueue, triplet)
 
     "Should this be run every pop?"
@@ -240,10 +242,10 @@ def new_active(endTriplet, activeObstacle):
     """"
     Returns the second obstacle in the path from activeObstacle to endObstacle
     """
-    parent = endTriplet
-    while parent.parent.obstacles[0] != activeObstacle:
-        parent = parent.parent
-    return parent.obstacles[0]
+    current = endTriplet
+    while current.parent.obstacles[2] != activeObstacle:
+        current = current.parent
+    return current.obstacles[2]
 
 def create_path(final_node):
     path = deque()
@@ -254,7 +256,7 @@ def create_path(final_node):
         path.appendleft(current)
     return list(path)
 
-def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbour_func=lambda c, n, s: c.quadruplet_distance(n, s), scope_range = 30):
+def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbour_func=lambda c, n, s: c.quadruplet_distance(n, s), scope_range = 50):
     """
     This implements a simple A*-search, using the cost_to_move()
     and heuristic_cost() functions to find g and h values, respectively.
@@ -262,7 +264,7 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbo
 
     TODO:
     Catch when it is unable to complete and physically backtrack, marking the current path unfeasible
-    Find a way to correctly backtrack in new_active and filter_queue
+    Investigate why some triplets have no parents
     tests
     """
     plt.ion()
@@ -273,58 +275,73 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbo
     heappush(queue, init_triplet)
     current = None
     found = False
-    active = init_triplet.obstacles[0]
-    while queue:
-        current = heappop(queue)
-        visited.append(current)
-        if fig is not None:
-            fig.gca().clear()
-            plot_desired_path([previous_wp, wp], create_path(current), env, fig)
-            circle = plt.Circle((active.x, active.y), 5, color='g')
-            ax = fig.gca()
-            ax.add_artist(circle)
-            plt.draw()
-            plt.pause(.001)
-        # Check if we have reached our goal, and end if we have
-        if wp.distance_to(Point(current.obstacles[2].x, current.obstacles[2].y)) < max_dist:
-            found = True
-            break
-        "should it be current.obstacles[2]?"
+    active = init_triplet.obstacles[2]
+    while
+        while queue:
+            current = heappop(queue)
+            visited.append(current)
+            if fig is not None:
+                fig.gca().clear()
+                plot_desired_path([previous_wp, wp], create_path(current), env, fig)
+                circle = plt.Circle((active.x, active.y), 5, color='g')
+                ax = fig.gca()
+                ax.add_artist(circle)
+                plt.draw()
+                plt.pause(.001)
+            # Check if we have reached our goal, and end if we have
+            if wp.distance_to(Point(current.obstacles[2].x, current.obstacles[2].y)) < max_dist:
+                found = True
+                break
+            "should it be current.obstacles[2]?"
 
-        if active.distance_to(current.obstacles[0]) > scope_range:
-            previous_active = active
-            active = new_active(current, active)
-            queue = filter_queue(queue, active, previous_active)
+            if active.distance_to(current.obstacles[2]) > scope_range:
+                previous_active = active
+                active = new_active(current, active)
+                queue = filter_queue(queue, active, previous_active)
 
-        possibilities = neighbour_func(current, current.obstacles[2].neighbours, env.snake_len)
-        for obstacle, distance in possibilities.items():
-            triplet = current.get_next_triplet(obstacle)
-            if triplet in visited:
-                continue
-            cost = current.cost + cost_to_move(previous_wp, wp, current, obstacle, distance)
-            # If the triplet is not in the queue yet, add it and update its cost and heuristic cost
-            if triplet not in queue:
-                seen.append(triplet)
-                triplet.cost = cost
-                triplet.parent = current
-                triplet.h = heuristic_cost(wp, obstacle)
-                triplet.parent = current
-                heappush(queue, triplet)
-            # If the new cost is better than the old one, update the old one
-            else:
-                for t in queue:
-                    if t == triplet:
-                        triplet = t
-                        break
-                if cost + triplet.h < triplet.cost + triplet.h:
-                    triplet.cost = cost
-                    triplet.parent = current
-            heapify(queue)
-    if not found:
-        print("No path found")
+            add_neighbors_to_queue(current, queue, seen, wp)
+
+        if not found:
+            print("No path found")
+            current.parent.deadend.append(active)
+            active = current.parent.obstacles[2]
+            add_neighbors_to_queue(current.parent, queue, seen, wp)
+            continue
+        break
+
     # Build path from parentage
     plt.ioff()
     return current
+
+
+def add_neighbors_to_queue(current, queue, seen, wp)
+    possibilities = neighbour_func(current, current.obstacles[2].neighbours, env.snake_len)
+    for obstacle, distance in possibilities.items():
+        if obstacle.id in current.parent.deadend:
+            continue
+
+        triplet = current.get_next_triplet(obstacle)
+        if triplet in visited:
+            continue
+        cost = current.cost + cost_to_move(previous_wp, wp, current, obstacle, distance)
+        # If the triplet is not in the queue yet, add it and update its cost and heuristic cost
+        if triplet not in queue:
+            seen.append(triplet)
+            triplet.cost = cost
+            triplet.parent = current
+            triplet.h = heuristic_cost(wp, obstacle)
+            heappush(queue, triplet)
+        # If the new cost is better than the old one, update the old one
+        else:
+            for t in queue:
+                if t == triplet:
+                    triplet = t
+                    break
+            if cost + triplet.h < triplet.cost + triplet.h:
+                triplet.cost = cost
+                triplet.parent = current
+        heapify(queue)
+    return
 
 def path_finder(waypoints, radiuses, init_triplet, env, max_dist=15, neighbour_func=lambda c, n, s: c.quadruplet_distance(n, s)):
     min_dist_wp = 100000000
@@ -341,7 +358,6 @@ def path_finder(waypoints, radiuses, init_triplet, env, max_dist=15, neighbour_f
     final_path = [init_triplet]
     for i in range(1,len(waypoints)):
         final_triplet = path_to_wp(waypoints[i-1], waypoints[i], final_triplet, env, max_dist, fig, neighbour_func)
-    time.sleep(10)
     return create_path(final_triplet)
 
 def plot_visited(env, visited):
@@ -371,5 +387,6 @@ if __name__ == "__main__":
         pass
     """
     print("Found path")
+    time.sleep(10)
     input()
     # plot_visited(env, visited)
