@@ -209,7 +209,7 @@ def cost_to_move(current_wp, next_wp, current_triplet, next_obstacle, distance):
     return cost
 
 def heuristic_cost(wp, obstacle):
-    cost = wp.distance_to(Point(obstacle.x, obstacle.y))
+    cost = wp.distance_to(Point(obstacle.x, obstacle.y)) - obstacle.radius
     return cost
 
 def distance_to_path(obstacle, wp1, wp2):
