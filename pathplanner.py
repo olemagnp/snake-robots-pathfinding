@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import math
 from collections import deque
 from heapq import *
+import time
 
 def create_desired_path(env, num_wp):
     points = []
@@ -210,8 +211,11 @@ def filter_queue(queue, newActive, prevActive):
         triplet = heappop(queue)
         parent = triplet
         "Follow the triplets parents until you reach the previously active node"
-        while parent.parent.obstacles[0] != prevActive:
-            parent = parent.parent
+        try:
+            while parent.parent.obstacles[0] != prevActive:
+                parent = parent.parent
+        except AttributeError:
+                print("Failed to find parent")
         "Is the new active in the path?"
         if parent.obstacles[0] == newActive:
             heappush(newqueue, triplet)
@@ -239,7 +243,7 @@ def create_path(final_node):
         path.appendleft(current)
     return list(path)
 
-def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbour_func=lambda c, n, s: c.quadruplet_distance(n, s)):
+def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbour_func=lambda c, n, s: c.quadruplet_distance(n, s), scope_range = 30):
     """
     This implements a simple A*-search, using the cost_to_move()
     and heuristic_cost() functions to find g and h values, respectively.
@@ -265,6 +269,9 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbo
         if fig is not None:
             fig.gca().clear()
             plot_desired_path([previous_wp, wp], create_path(current), env, fig)
+            circle = plt.Circle((active.x, active.y), 5, color='g')
+            ax = fig.gca()
+            ax.add_artist(circle)
             plt.draw()
             plt.pause(.001)
         # Check if we have reached our goal, and end if we have
@@ -272,6 +279,7 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbo
             found = True
             break
         "should it be current.obstacles[2]?"
+
         if active.distance_to(current.obstacles[0]) > scope_range:
             previous_active = active
             active = new_active(current, active)
@@ -316,7 +324,8 @@ def path_finder(waypoints, radiuses, init_triplet, env, max_dist=15, neighbour_f
         if(dist < min_dist_wp):
             min_dist_wp = dist
             index_closest_wp = i
-
+    plt.pause(3)
+    time.sleep(3)
     init_triplet=env.init_triplet
     fig = plt.figure()
     final_triplet = env.init_triplet
@@ -342,6 +351,7 @@ if __name__ == "__main__":
     env.save("env")
     points = create_desired_path(env,3)
     path2 = path_finder(points, None, env.init_triplet, env, 10, lambda c, n, s: c.quadruplet_distance_stupid(n, s))
+    """
     try:
         path = path_finder(points, None, env.init_triplet, env, 10)
     except ValueError:
@@ -349,5 +359,6 @@ if __name__ == "__main__":
         plot_desired_path(points, path, env=env)
         plt.show()
         pass
+    """
     print("Found path")
     # plot_visited(env, visited)
