@@ -128,7 +128,6 @@ def filter_queue(queue, newActive, prevActive):
         parent = triplet
         "Follow the triplets parents until you reach the previously active node"
         while parent.parent.obstacles[0] != prevActive:
-            print(parent.parent.obstacles[0].id)
             parent = parent.parent
         "Is the new active in the path?"
         if parent.obstacles[0] == newActive:
@@ -143,12 +142,9 @@ def new_active(endTriplet, activeObstacle):
     """"
     Returns the second obstacle in the path from activeObstacle to endObstacle
     """
-    print("entered")
     parent = endTriplet
     while parent.parent.obstacles[0] != activeObstacle:
-        print(parent.parent.obstacles[0].id)
         parent = parent.parent
-    print("exited")
     return parent.obstacles[0]
 
 def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, scope_range=70):
@@ -196,6 +192,7 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, scope_range=70):
                 seen.append(triplet)
                 triplet.cost = cost
                 triplet.h = heuristic_cost(wp, obstacle)
+                triplet.parent = current
                 heappush(queue, triplet)
             # If the new cost is better than the old one, update the old one
             else:
