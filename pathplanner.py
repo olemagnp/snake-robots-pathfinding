@@ -121,28 +121,46 @@ def heuristic_cost(wp, obstacle):
 def distance_to_path(obstacle, wp1, wp2):
     return np.abs((wp2.y - wp1.y) * obstacle.x - (wp2.x - wp1.x) * obstacle.y + wp2.x * wp1.y - wp2.y * wp1.x) / wp1.distance_to(wp2)
 
-def filter_queue(queue, newObstacle, prevObstacle):
-    for triplet in queue:
-        parent = triplet.parent
-        while parent.obstacles[0] != prevObstacle:
+def filter_queue(queue, newActive, prevActive):
+    newqueue = []  # Open set
+    while queue:
+        triplet = heappop(queue)
+        parent = triplet
+        "Follow the triplets parents until you reach the previously active node"
+        while parent.parent.obstacles[0] != prevActive:
+            print(parent.parent.obstacles[0].id)
             parent = parent.parent
-        if parent.obstacles[1] != newObstacle:
-            heappop(triplet)
+        "Is the new active in the path?"
+        if parent.obstacles[0] == newActive:
+            heappush(newqueue, triplet)
 
-    heapify(queue)
-    return queue
+    "Should this be run every pop?"
+    heapify(newqueue)
+    return newqueue
 
-def new_active(endObstacle, activeObstacle):
-    parent = endObstacle.parent
-    while parent.parent != activeObstacle:
+
+def new_active(endTriplet, activeObstacle):
+    """"
+    Returns the second obstacle in the path from activeObstacle to endObstacle
+    """
+    print("entered")
+    parent = endTriplet
+    while parent.parent.obstacles[0] != activeObstacle:
+        print(parent.parent.obstacles[0].id)
         parent = parent.parent
-    return parent
+    print("exited")
+    return parent.obstacles[0]
 
-def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, scope_range=20):
+def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, scope_range=70):
     """
     This implements a simple A*-search, using the cost_to_move()
     and heuristic_cost() functions to find g and h values, respectively.
     Returns a list of triplets that the snake will move through.
+
+    TODO:
+    Catch when it is unable to complete and physically backtrack, marking the current path unfeasible
+    Find a way to correctly backtrack in new_active and filter_queue
+    tests
     """
     wp_index = 2
     visited = [] # Closed set
@@ -151,7 +169,7 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, scope_range=20):
     heappush(queue, init_triplet)
     current = None
     found = False
-    active = init_triplet.obstacles[2]
+    active = init_triplet.obstacles[0]
     while queue:
         parent = current
         current = heappop(queue)
@@ -161,10 +179,11 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, scope_range=20):
         if wp.distance_to(Point(current.obstacles[0].x, current.obstacles[0].y)) < max_dist:
             found = True
             break
-        if active.distance_to(current) > scope_range:
+        "should it be current.obstacles[2]?"
+        if active.distance_to(current.obstacles[0]) > scope_range:
             previous_active = active
             active = new_active(current, active)
-            filter_queue(queue, active, previous_active)
+            queue = filter_queue(queue, active, previous_active)
 
         possibilities = current.quadruplet_distance(current.obstacles[0].neighbours, env.snake_len)
         for obstacle, distance in possibilities.items():

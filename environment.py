@@ -9,14 +9,16 @@ class Environment:
         self.height = height
         start_obstacle_radius = 1
         self.obstacles = [Obstacle(start_pos[0] - 2 * start_obstacle_radius - snake_width, start_pos[1], 
-                start_obstacle_radius), Obstacle(start_pos[0], start_pos[1], start_obstacle_radius), 
-                Obstacle(start_pos[0] + 2 * start_obstacle_radius + snake_width, start_pos[1], start_obstacle_radius)]
+                start_obstacle_radius, 0), Obstacle(start_pos[0], start_pos[1], start_obstacle_radius, 1),
+                Obstacle(start_pos[0] + 2 * start_obstacle_radius + snake_width, start_pos[1], start_obstacle_radius, 2)]
         self.start_pos = start_pos
         self.init_triplet = pathplanner.Triplet(self.obstacles[:3])
         self.snake_len = snake_len
+        count = 3
         while len(self.obstacles) < min_num_obstacles:
             for _ in range(max_num_obstacles - len(self.obstacles)):
-                obstacle = Obstacle(width * np.random.rand(), height * np.random.rand(), radius_func())
+                obstacle = Obstacle(width * np.random.rand(), height * np.random.rand(), radius_func(), count)
+                count += 1
                 collision = False
                 for obs in self.obstacles:
                     if obstacle.collides_with(obs, snake_width):
@@ -42,11 +44,12 @@ class Environment:
             return pickle.load(f)
 
 class Obstacle:
-    def __init__(self, x, y, radius):
+    def __init__(self, x, y, radius, id):
         self.x = x
         self.y = y
         self.radius = radius
         self.neighbours = {}
+        self.id = id
     
     def collides_with(self, other, collision_distance):
         return np.sqrt((self.x - other.x) ** 2 + (self.y - other.y) ** 2) < collision_distance + self.radius + other.radius
