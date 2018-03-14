@@ -59,6 +59,9 @@ class Point:
     
     def __str__(self):
         return self.__repr__()
+    
+    def __add__(self, other):
+        return Point(self.x + other.x, self.y + other.y)
 
 class Line:
     def __init__(self, length, angle):
@@ -86,7 +89,7 @@ class Triplet:
     def push_front(self,ob):
         self.obstacles[0] = self.obstacles[1]
         self.obstacles[1] = self.obstacles[2]
-        self.obstacles[3] = ob
+        self.obstacles[2] = ob
     
     def get_next_triplet(self, ob):
         trip = Triplet(self.obstacles[1:] + [ob])
@@ -154,6 +157,15 @@ class Triplet:
                 ob_dict[ob] = path_length
         return ob_dict  # dictionary of {Obstacle: required snake length}
 
+def find_start_end_points(goal_ob, tangent, side):
+    radial_theta = line.angle + math.pi/2 if side == 1 else line.angle - math.pi/2
+    end_x = goal_ob.x + goal_ob.radius * np.cos(radial_theta)
+    end_y = goal_ob.y + goal_ob.radius * np.sin(radial_theta)
+
+    start_x = end_x - line.length * np.cos(line.angle)
+    start_y = end_y - line.length * np.sin(line.angle)
+    return Point(start_x, start_y), Point(end_x, end_y)
+
 def length_of_three_lines(lines, radii, s):  # s is side
     path_length = 0
     for line in lines:
@@ -173,7 +185,7 @@ def length_of_three_lines(lines, radii, s):  # s is side
             # Then it finds the distances from the endpoints to the point on the arch, and adds these to the path_length. Then it subtracts the length of the tangent lines from
             # path_length, as these are added earlier in the code. (See picture on google drive)
             a = np.sqrt((radii[i+1] * (1 - np.cos(theta[i]/2))) ** 2 + (lines[i].length - radii[i+1]*np.sin(theta[i]/2)) ** 2)
-            b = np.sqrt((radii[i+1]*np.cos(theta[i]) + lines[i+1].length*np.cos(theta[i]-np.pi/2)-radii[i+1]*np.cos(theta[i]/2)) ** 2 + (radii[i+1]*np.sin(theta[i]+lines[i+1].length*np.sin(theta[i])-np.pi/2)-radii[i]*np.sin(theta[i]/2)) ** 2)
+            b = np.sqrt((radii[i+1]*np.cos(theta[i]) + lines[i+1].length*np.cos(theta[i]-np.pi/2)-radii[i+1]*np.cos(theta[i]/2)) ** 2 + (radii[i+1]*np.sin(theta[i])+lines[i+1].length*np.sin(theta[i]-np.pi/2)-radii[i]*np.sin(theta[i]/2)) ** 2)
             path_length += (a+b) - (lines[i].length + lines[i+1].length)
         pl[i+1] = path_length
 
@@ -288,13 +300,15 @@ def plot_visited(env, visited):
 
 if __name__ == "__main__":
     env = e.Environment(200,200,150,300, radius_func=lambda: np.random.rand() * 3 + 1, snake_len=50)
+    env.save("env")
     points = create_desired_path(env,3)
     path2 = path_finder(points, None, env.init_triplet, env, 10, lambda c, n, s: c.quadruplet_distance_stupid(n, s))
     try:
         path = path_finder(points, None, env.init_triplet, env, 10)
     except ValueError:
+        print("Something wrong happened")
+        plot_desired_path(points, path, env=env)
+        plt.show()
         pass
     print("Found path")
     # plot_visited(env, visited)
-    # plot_desired_path(points, env=env)
-    plt.show()
