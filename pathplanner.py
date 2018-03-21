@@ -256,7 +256,7 @@ def create_path(final_node):
         path.appendleft(current)
     return list(path)
 
-def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbour_func=lambda c, n, s: c.quadruplet_distance(n, s), scope_range = 50):
+def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbour_func=lambda c, n, s: c.quadruplet_distance(n, s), scope_range = 30):
     """
     This implements a simple A*-search, using the cost_to_move()
     and heuristic_cost() functions to find g and h values, respectively.
@@ -276,7 +276,8 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbo
     current = None
     found = False
     active = init_triplet.obstacles[2]
-    while
+    iteration = 1
+    while True:
         while queue:
             current = heappop(queue)
             visited.append(current)
@@ -299,13 +300,16 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbo
                 active = new_active(current, active)
                 queue = filter_queue(queue, active, previous_active)
 
-            add_neighbors_to_queue(current, queue, seen, wp)
+            add_neighbors_to_queue(init_triplet, current, queue, visited, seen,previous_wp, wp, neighbour_func)
 
         if not found:
             print("No path found")
-            current.parent.deadend.append(active)
+            if active.id not in current.parent.deadend: 
+                current.parent.deadend.append(active.id)
+            print("Active id: ", active.id)
+            print("Current parent deadend = ", current.parent.deadend)
             active = current.parent.obstacles[2]
-            add_neighbors_to_queue(current.parent, queue, seen, wp)
+            add_neighbors_to_queue(init_triplet, current.parent, queue, visited, seen, previous_wp, wp, neighbour_func)
             continue
         break
 
@@ -314,34 +318,38 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbo
     return current
 
 
-def add_neighbors_to_queue(current, queue, seen, wp)
+def add_neighbors_to_queue(init_triplet, current, queue, visited, seen,previous_wp, wp, neighbour_func):
     possibilities = neighbour_func(current, current.obstacles[2].neighbours, env.snake_len)
     for obstacle, distance in possibilities.items():
-        if obstacle.id in current.parent.deadend:
+        #if current !=init_triplet:
+            #print("Current deadend = ", current.parent.deadend, " Current obstacle id: ", obstacle.id)
+        print("Obstacle id: ", obstacle.id)
+        if (current != init_triplet) and (obstacle.id in current.deadend):
+            print("Not a good path")
             continue
-
-        triplet = current.get_next_triplet(obstacle)
-        if triplet in visited:
-            continue
-        cost = current.cost + cost_to_move(previous_wp, wp, current, obstacle, distance)
-        # If the triplet is not in the queue yet, add it and update its cost and heuristic cost
-        if triplet not in queue:
-            seen.append(triplet)
-            triplet.cost = cost
-            triplet.parent = current
-            triplet.h = heuristic_cost(wp, obstacle)
-            heappush(queue, triplet)
-        # If the new cost is better than the old one, update the old one
         else:
-            for t in queue:
-                if t == triplet:
-                    triplet = t
-                    break
-            if cost + triplet.h < triplet.cost + triplet.h:
+            triplet = current.get_next_triplet(obstacle)
+            if triplet in visited:
+                continue
+            cost = current.cost + cost_to_move(previous_wp, wp, current, obstacle, distance)
+            # If the triplet is not in the queue yet, add it and update its cost and heuristic cost
+            if triplet not in queue:
+                seen.append(triplet)
                 triplet.cost = cost
                 triplet.parent = current
-        heapify(queue)
-    return
+                triplet.h = heuristic_cost(wp, obstacle)
+                heappush(queue, triplet)
+            # If the new cost is better than the old one, update the old one
+            else:
+                for t in queue:
+                    if t == triplet:
+                        triplet = t
+                        break
+                if cost + triplet.h < triplet.cost + triplet.h:
+                    triplet.cost = cost
+                    triplet.parent = current
+            heapify(queue)
+    return 
 
 def path_finder(waypoints, radiuses, init_triplet, env, max_dist=15, neighbour_func=lambda c, n, s: c.quadruplet_distance(n, s)):
     min_dist_wp = 100000000
