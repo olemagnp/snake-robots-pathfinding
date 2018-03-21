@@ -284,9 +284,11 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbo
             if fig is not None:
                 fig.gca().clear()
                 plot_desired_path([previous_wp, wp], create_path(current), env, fig)
-                circle = plt.Circle((active.x, active.y), 5, color='g')
+                circle = plt.Circle((active.x, active.y), 4, color='black')
+                circle2 = plt.Circle((active.x, active.y), scope_range, fill=False,  color='yellow')
                 ax = fig.gca()
                 ax.add_artist(circle)
+                ax.add_artist(circle2)
                 plt.draw()
                 plt.pause(.001)
             # Check if we have reached our goal, and end if we have
@@ -294,17 +296,17 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbo
                 found = True
                 break
             
-            if active.distance_to(current.obstacles[2]) < scope_range:
+            if active.distance_to(current.obstacles[2]) > scope_range:
                 previous_active = active
                 active = new_active(current, active)
                 queue = filter_queue(queue, active, previous_active)
             
             add_neighbors_to_queue(init_triplet, current, queue, visited, seen,previous_wp, wp, neighbour_func)
-
+        
         if not found:
             print("No path found")
             if active.id not in current.parent.deadend: 
-                current.parent.deadend.append(active.id)
+                current.deadend.append(active.id)
             print("Active id: ", active.id)
             print("Current parent deadend = ", current.parent.deadend)
             active = current.parent.obstacles[2]
