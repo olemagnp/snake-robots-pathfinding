@@ -256,7 +256,7 @@ def create_path(final_node):
         path.appendleft(current)
     return list(path)
 
-def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbour_func=lambda c, n, s: c.quadruplet_distance(n, s), scope_range = 30):
+def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbour_func=lambda c, n, s: c.quadruplet_distance(n, s), scope_range = 50):
     """
     This implements a simple A*-search, using the cost_to_move()
     and heuristic_cost() functions to find g and h values, respectively.
@@ -293,13 +293,12 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbo
             if wp.distance_to(Point(current.obstacles[2].x, current.obstacles[2].y)) < max_dist:
                 found = True
                 break
-            "should it be current.obstacles[2]?"
-
-            if active.distance_to(current.obstacles[2]) > scope_range:
+            
+            if active.distance_to(current.obstacles[2]) < scope_range:
                 previous_active = active
                 active = new_active(current, active)
                 queue = filter_queue(queue, active, previous_active)
-
+            
             add_neighbors_to_queue(init_triplet, current, queue, visited, seen,previous_wp, wp, neighbour_func)
 
         if not found:
@@ -313,7 +312,6 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbo
             continue
         break
 
-    # Build path from parentage
     plt.ioff()
     return current
 
@@ -324,7 +322,7 @@ def add_neighbors_to_queue(init_triplet, current, queue, visited, seen,previous_
         #if current !=init_triplet:
             #print("Current deadend = ", current.parent.deadend, " Current obstacle id: ", obstacle.id)
         print("Obstacle id: ", obstacle.id)
-        if (current != init_triplet) and (obstacle.id in current.deadend):
+        if obstacle.id in current.deadend:
             print("Not a good path")
             continue
         else:
