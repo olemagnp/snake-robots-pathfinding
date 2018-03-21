@@ -400,8 +400,6 @@ def add_neighbors_to_queue(init_triplet, current, queue, visited, seen,previous_
             heapify(queue)
     return 
 
-
-
 def plot_visited(env, visited):
     plt.ion()
     fig = e.plot_environment(env)
