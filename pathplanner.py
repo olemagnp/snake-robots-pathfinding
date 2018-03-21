@@ -27,25 +27,52 @@ def create_desired_path(env, num_wp):
     points.append(end_p)
     return points
 
-def plot_desired_path(points, path=None, env=None, fig=None):
+def plot_path(path=None, fig=None):
+    fig = plt.figure() if fig is None else fig
+    axes=fig.gca()
+    if path is not None:
+        path = list(path)
+        path_x = []
+        path_y = []
+        for obstacle in path[0].obstacles:
+            axes.add_artist(obstacle.get_circle(color='b'))
+            path_x.append(obstacle.x)
+            path_y.append(obstacle.y)
+        for triplet in path[1:]:
+            axes.add_artist(triplet.obstacles[2].get_circle(color='b'))
+            path_x.append(triplet.obstacles[2].x)
+            path_y.append(triplet.obstacles[2].y)
+        axes.plot(path_x, path_y, 'b')
+    return fig
+
+def plot_desired_path(points, color, max_dist, fig=None):
     # Plot the environment and use its figure to plot the desired path
     fig = plt.figure() if fig is None else fig
-    if env:
-        fig = e.plot_environment(env, path=path, fig=fig)
-        ax = fig.gca()
-        ax.set_xlim([0, env.width])
-        ax.set_ylim([0, env.height])
-    else:
-        ax = fig.add_subplot(111)
+    fig = plot_waypoints(points, color, max_dist, fig)
+    return fig
+    
+def plot_waypoints(points, color, max_dist, fig=None):
+    fig = plt.figure() if fig is None else fig
     x = []
     y = []
+    ax = fig.gca()
     for p in points:
         x.append(p.x)
         y.append(p.y)
-    ax.plot(x,y,'go-')
-    plt.show()
+        circle = plt.Circle((p.x, p.y), max_dist, fill=False, color=color)
+        ax.add_artist(circle)
+        plt.draw()
+    ax.plot(x,y, color+'o-')
+    return fig
 
+def plot_active_segment(previous_wp, wp, color, max_dist, path=None, fig=None):
+    # Plot the environment and use its figure to plot the desired path
+    fig = plt.figure() if fig is None else fig
+    fig = plot_waypoints([previous_wp, wp], color, max_dist, fig)
+    fig = plot_path(path, fig)
+    return fig
 
+    
 class Point:
     def __init__(self,x,y):
         self.x = x
@@ -228,7 +255,7 @@ def filter_queue(queue, newActive, prevActive):
                 current = current.parent
 
         except AttributeError:
-                ""
+            print("Attribute error in filter_queue")
         "Is the new active in the path?"
         if current.obstacles[2] == newActive:
             heappush(newqueue, triplet)
@@ -256,7 +283,25 @@ def create_path(final_node):
         path.appendleft(current)
     return list(path)
 
-def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbour_func=lambda c, n, s: c.quadruplet_distance(n, s), scope_range = 50):
+def path_finder(waypoints, radiuses, init_triplet, env, max_dist=15, neighbour_func=lambda c, n, s: c.quadruplet_distance(n, s), acceptance_radiuses=None):
+    min_dist_wp = 100000000
+    index_closest_wp = 0
+    start_p = Point(init_triplet.obstacles[0].x, init_triplet.obstacles[0].y)
+    for i in range(len(waypoints)):
+        dist = start_p.distance_to(waypoints[i])
+        if(dist < min_dist_wp):
+            min_dist_wp = dist
+            index_closest_wp = i
+    init_triplet=env.init_triplet
+   
+    final_triplet = env.init_triplet
+    final_path = [init_triplet]
+    fig = plt.figure()
+    for i in range(1,len(waypoints)):
+        final_triplet = path_to_wp(waypoints, i, final_triplet, env, max_dist, fig, neighbour_func)
+    return create_path(final_triplet)
+
+def path_to_wp(waypoints, wp_index, init_triplet, env, max_dist=2, fig=None, neighbour_func=lambda c, n, s: c.quadruplet_distance(n, s), scope_range = 50):
     """
     This implements a simple A*-search, using the cost_to_move()
     and heuristic_cost() functions to find g and h values, respectively.
@@ -268,7 +313,8 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbo
     tests
     """
     plt.ion()
-    wp_index = 2
+    previous_wp = waypoints[wp_index-1]
+    wp = waypoints[wp_index]
     visited = [] # Closed set
     seen = []
     queue = [] # Open set
@@ -282,11 +328,13 @@ def path_to_wp(previous_wp, wp, init_triplet, env, max_dist=2, fig=None, neighbo
             current = heappop(queue)
             visited.append(current)
             if fig is not None:
-                fig.gca().clear()
-                plot_desired_path([previous_wp, wp], create_path(current), env, fig)
+                ax = fig.gca()
+                ax.clear()
+                fig = e.plot_environment(env, fig=fig)
+                fig = plot_desired_path(waypoints, 'g', max_dist, fig=fig)
+                fig = plot_active_segment(previous_wp, wp, 'm', max_dist, path=create_path(current), fig=fig)                
                 circle = plt.Circle((active.x, active.y), 4, color='black')
                 circle2 = plt.Circle((active.x, active.y), scope_range, fill=False,  color='yellow')
-                ax = fig.gca()
                 ax.add_artist(circle)
                 ax.add_artist(circle2)
                 plt.draw()
@@ -323,8 +371,9 @@ def add_neighbors_to_queue(init_triplet, current, queue, visited, seen,previous_
     for obstacle, distance in possibilities.items():
         #if current !=init_triplet:
             #print("Current deadend = ", current.parent.deadend, " Current obstacle id: ", obstacle.id)
-        print("Obstacle id: ", obstacle.id)
+        #
         if obstacle.id in current.deadend:
+            print("Obstacle id: ", obstacle.id)
             print("Not a good path")
             continue
         else:
@@ -351,22 +400,7 @@ def add_neighbors_to_queue(init_triplet, current, queue, visited, seen,previous_
             heapify(queue)
     return 
 
-def path_finder(waypoints, radiuses, init_triplet, env, max_dist=15, neighbour_func=lambda c, n, s: c.quadruplet_distance(n, s)):
-    min_dist_wp = 100000000
-    index_closest_wp = 0
-    start_p = Point(init_triplet.obstacles[0].x, init_triplet.obstacles[0].y)
-    for i in range(len(waypoints)):
-        dist = start_p.distance_to(waypoints[i])
-        if(dist < min_dist_wp):
-            min_dist_wp = dist
-            index_closest_wp = i
-    init_triplet=env.init_triplet
-    fig = plt.figure()
-    final_triplet = env.init_triplet
-    final_path = [init_triplet]
-    for i in range(1,len(waypoints)):
-        final_triplet = path_to_wp(waypoints[i-1], waypoints[i], final_triplet, env, max_dist, fig, neighbour_func)
-    return create_path(final_triplet)
+
 
 def plot_visited(env, visited):
     plt.ion()
