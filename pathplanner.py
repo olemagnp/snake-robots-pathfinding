@@ -259,9 +259,6 @@ def filter_queue(queue, newActive, prevActive):
         "Is the new active in the path?"
         if current.obstacles[2] == newActive:
             heappush(newqueue, triplet)
-
-    "Should this be run every pop?"
-    heapify(newqueue)
     return newqueue
 
 
@@ -272,7 +269,7 @@ def new_active(endTriplet, activeObstacle):
     current = endTriplet
     while current.parent.obstacles[2] != activeObstacle:
         current = current.parent
-    return current.obstacles[2]
+    return current
 
 def create_path(final_node):
     path = deque()
@@ -299,6 +296,8 @@ def path_finder(waypoints, radiuses, init_triplet, env, max_dist=15, neighbour_f
     fig = plt.figure()
     for i in range(1,len(waypoints)):
         final_triplet = path_to_wp(waypoints, i, final_triplet, env, max_dist, fig, neighbour_func)
+        if final_triplet is None:
+            return None
     return create_path(final_triplet)
 
 def path_to_wp(waypoints, wp_index, init_triplet, env, max_dist=2, fig=None, neighbour_func=lambda c, n, s: c.quadruplet_distance(n, s), scope_range = 50):
@@ -321,6 +320,8 @@ def path_to_wp(waypoints, wp_index, init_triplet, env, max_dist=2, fig=None, nei
     heappush(queue, init_triplet)
     current = None
     found = False
+    active_triplet = init_triplet
+    print(active_triplet)
     active = init_triplet.obstacles[2]
     iteration = 1
     while True:
@@ -346,19 +347,24 @@ def path_to_wp(waypoints, wp_index, init_triplet, env, max_dist=2, fig=None, nei
             
             if active.distance_to(current.obstacles[2]) > scope_range:
                 previous_active = active
-                active = new_active(current, active)
+                active_triplet = new_active(current, active)
+                active = active_triplet.obstacles[2]
                 queue = filter_queue(queue, active, previous_active)
             
             add_neighbors_to_queue(init_triplet, current, queue, visited, seen,previous_wp, wp, neighbour_func)
         
         if not found:
             print("No path found")
-            if active.id not in current.parent.deadend: 
-                current.deadend.append(active.id)
+            if active_triplet.parent is None:
+                return None
+            if active.id not in active_triplet.parent.deadend: 
+                active_triplet.parent.deadend.append(active.id)
             print("Active id: ", active.id)
-            print("Current parent deadend = ", current.parent.deadend)
-            active = current.parent.obstacles[2]
-            add_neighbors_to_queue(init_triplet, current.parent, queue, visited, seen, previous_wp, wp, neighbour_func)
+            print("Current parent deadend = ", active_triplet.parent.deadend)
+            active_triplet = current.parent
+            active = active_triplet.obstacles[2]
+            current = active_triplet
+            add_neighbors_to_queue(init_triplet, current, queue, visited, seen, previous_wp, wp, neighbour_func)
             continue
         break
 
@@ -413,7 +419,7 @@ def plot_visited(env, visited):
     plt.ioff()
 
 if __name__ == "__main__":
-    env = e.Environment(200,200,150,300, radius_func=lambda: np.random.rand() * 3 + 1, snake_len=50)
+    env = e.Environment(200,200,75,150, radius_func=lambda: np.random.rand() * 3 + 1, snake_len=50)
     env.save("env")
     points = create_desired_path(env,3)
     path2 = path_finder(points, None, env.init_triplet, env, 10, lambda c, n, s: c.quadruplet_distance_stupid(n, s))
@@ -426,7 +432,9 @@ if __name__ == "__main__":
         plt.show()
         pass
     """
-    print("Found path")
-    time.sleep(10)
+    if path2 is not None:
+        print("Found path")
+    else:
+        print("No path found")
     input()
     # plot_visited(env, visited)
