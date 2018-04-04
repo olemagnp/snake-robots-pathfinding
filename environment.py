@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import pathplanner
+from pathplanner import Point
 
 class Environment:
     def __init__(self, width, height, min_num_obstacles, max_num_obstacles, radius_func=lambda: np.random.rand() * 10, start_pos=(25, 25), snake_len=10, snake_width=2):
@@ -35,6 +36,14 @@ class Environment:
                     obstacle.neighbours[obstacle2] = distance
                     obstacle2.neighbours[obstacle] = distance
     
+    def get_radius(self, p, default=10):
+        min_dist = float('inf')
+        for ob in self.obstacles:
+            d = p.distance_to(ob)
+            if d < min_dist:
+                min_dist = d
+        return max(min_dist, default)
+    
     def save(self, path):
         with open(path, 'wb') as f:
             pickle.dump(self, f)
@@ -43,7 +52,7 @@ class Environment:
         with open(path, 'rb') as f:
             return pickle.load(f)
 
-class Obstacle:
+class Obstacle(Point):
     def __init__(self, x, y, radius, id):
         self.x = x
         self.y = y
