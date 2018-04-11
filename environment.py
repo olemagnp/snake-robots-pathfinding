@@ -2,7 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import pathplanner
-from pathplanner import Point
+from triplet import Point
+from plotting import plot_environment
 
 class Environment:
     def __init__(self, width, height, min_num_obstacles, max_num_obstacles, radius_func=lambda: np.random.rand() * 10, start_pos=(25, 25), snake_len=10, snake_width=2):
@@ -48,7 +49,8 @@ class Environment:
         with open(path, 'wb') as f:
             pickle.dump(self, f)
     
-    def load(path):
+    @classmethod
+    def load(cls, path):
         with open(path, 'rb') as f:
             return pickle.load(f)
 
@@ -73,19 +75,6 @@ class Obstacle(Point):
 
     def __str__(self):
         return self.__repr__()
-
-def plot_environment(env, snake=None, fig=None):
-    fig = fig if fig else plt.figure()
-    ax = fig.gca()
-    points = np.array([[obs.x, obs.y, (2 * obs.radius) ** 2] for obs in env.obstacles])
-    axes = fig.add_subplot(111)
-    ax.set_xlim([0, env.width])
-    ax.set_ylim([0, env.height])
-    axes.set_aspect('equal', adjustable='box')
-    for obs in env.obstacles:
-        axes.add_artist(obs.get_circle())
-    
-    return fig
 
 if __name__ == '__main__':
     env = Environment(200, 100, 20, 50)

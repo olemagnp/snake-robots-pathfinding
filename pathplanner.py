@@ -6,6 +6,8 @@ from collections import deque
 from heapq import *
 import time
 from sys import exit
+from triplet import Triplet, Point, Line
+from plotting import plot_desired_path, plot_active_segment
 
 def create_desired_path(env, num_wp):
     points = []
@@ -28,220 +30,7 @@ def create_desired_path(env, num_wp):
     points.append(end_p)
     return points
 
-def plot_path(path=None, fig=None):
-    fig = plt.figure() if fig is None else fig
-    axes=fig.gca()
-    if path is not None:
-        path = list(path)
-        path_x = []
-        path_y = []
-        for obstacle in path[0].obstacles:
-            axes.add_artist(obstacle.get_circle(color='b'))
-            path_x.append(obstacle.x)
-            path_y.append(obstacle.y)
-        for triplet in path[1:]:
-            axes.add_artist(triplet.obstacles[2].get_circle(color='b'))
-            path_x.append(triplet.obstacles[2].x)
-            path_y.append(triplet.obstacles[2].y)
-        axes.plot(path_x, path_y, 'b')
-    return fig
-
-def plot_desired_path(points, color, radii, fig=None):
-    # Plot the environment and use its figure to plot the desired path
-    fig = plt.figure() if fig is None else fig
-    fig = plot_waypoints(points, color, radii, fig)
-    return fig
-    
-def plot_waypoints(points, color, radii, fig=None):
-    fig = plt.figure() if fig is None else fig
-    x = []
-    y = []
-    ax = fig.gca()
-    for i, p in enumerate(points):
-        x.append(p.x)
-        y.append(p.y)
-        circle = plt.Circle((p.x, p.y), radii[i], fill=False, color=color)
-        ax.add_artist(circle)
-        plt.draw()
-    ax.plot(x,y, color+'o-')
-    return fig
-
-def plot_active_segment(previous_wp, wp, color, radii, path=None, fig=None):
-    # Plot the environment and use its figure to plot the desired path
-    fig = plt.figure() if fig is None else fig
-    fig = plot_waypoints([previous_wp, wp], color, radii, fig)
-    fig = plot_path(path, fig)
-    return fig
-
-    
-class Point:
-    def __init__(self,x,y):
-        self.x = x
-        self.y = y
-        self.distance = None
-
-    def distance_to(self, p):
-        return np.sqrt((self.x- p.x) ** 2 + (self.y-p.y) ** 2)
-    
-    def __repr__(self):
-        return "Point(%.2f, %.2f)" % (self.x, self.y)
-    
-    def __str__(self):
-        return self.__repr__()
-
-    def __add__(self, other):
-        return Point(self.x + other.x, self.y + other.y)
-
-class Line:
-    def __init__(self, length, angle):
-        self.length = length
-        self.angle = angle
-
-    def angle_to_line(self, line):
-        return line.angle - self.angle
-
-    def __repr__(self):
-        return "Line[length=%.2f, angle=%.2f]" % (self.length, self.angle)
-
-    def __str__(self):
-        return self.__repr__()
-
-
-class Triplet:
-    def __init__(self, obstacles):
-        self.obstacles = obstacles
-        self.side = 0
-        self.cost = 0 # Actual cost to move to this obstacle 
-        self.h = 0 # Heuristic cost left to the goal
-        self.parent = None
-        self.deadend = []
-        self.is_first_in_path = False
-
-    def push_front(self,ob):
-        self.obstacles[0] = self.obstacles[1]
-        self.obstacles[1] = self.obstacles[2]
-        self.obstacles[2] = ob
-    
-    def get_next_triplet(self, ob):
-        trip = Triplet(self.obstacles[1:] + [ob])
-        trip.side = (self.side + 1) % 2
-        return trip
-    
-    def __eq__(self, o):
-        return self.side == o.side and np.all(self.obstacles == o.obstacles)
-    
-    def __hash__(self):
-        return self.__repr__().__hash__()
-    
-    def __lt__(self, o):
-        return self.cost + self.h < o.cost + o.h
-
-    def __le__(self, o):
-        return self.cost + self.h <= o.cost + o.h
-        self.side = 0                   ### side = 0 - snake is right of object 3.
-                                        ### side = 1 - snake is left of object 3.
-        self.distance_to_next=None
-    
-    def __repr__(self):
-        return "Triplet" + str((self.obstacles[0].id, self.obstacles[1].id, self.obstacles[2].id))
-
-    def __str__(self):
-        return self.__repr__()
-
-    def quadruplet_distance_stupid(self, neighbours, snake_length):
-        point2 = Point(self.obstacles[0].x, self.obstacles[0].y)
-        point1 = Point(self.obstacles[1].x, self.obstacles[1].y)
-        point0 = Point(self.obstacles[2].x, self.obstacles[2].y)
-
-        snake_left = snake_length - point0.distance_to(point1) - point1.distance_to(point2)
-        reachable_pts = {}
-        for obstacle, distance in neighbours.items():
-            if snake_left >= distance:
-                reachable_pts[obstacle] = distance
-        return reachable_pts
-
-    def quadruplet_distance(self, neighbours, snake_length):
-        tangent_lines = []
-
-        for i in range(2):
-            center_distance = np.sqrt((self.obstacles[i+1].x - self.obstacles[i].x) ** 2 + (self.obstacles[i+1].y - self.obstacles[i].y) ** 2)
-            center_theta = np.arctan2((self.obstacles[i+1].y - self.obstacles[i].y), (self.obstacles[i+1].x - self.obstacles[i].x))
-
-            summed_radius = self.obstacles[i].radius + self.obstacles[i+1].radius
-
-            tangent_length = np.sqrt(center_distance ** 2 - summed_radius ** 2)
-            theta_difference = np.arcsin(summed_radius / center_distance)
-
-            tangent_lines.append([Line(tangent_length, center_theta - theta_difference), Line(tangent_length, center_theta + theta_difference)])
-
-        cur_triplet_dist = triplet_distance([tangent_lines[0][(self.side+1)%2], tangent_lines[1][self.side]], self.obstacles[1].radius, self.side)
-        ob_dict = {}
-
-        for ob in neighbours:
-            if ob in self.obstacles:
-                continue
-            center_distance = np.sqrt((ob.x - self.obstacles[2].x) ** 2 + (ob.y - self.obstacles[2].y) ** 2)
-            center_theta = np.arctan2((ob.y - self.obstacles[2].y), (ob.x - self.obstacles[2].x))
-
-            summed_radius_neigh = (self.obstacles[2].radius + ob.radius)
-
-            tangent_length = np.sqrt(center_distance ** 2 - summed_radius_neigh ** 2)
-            theta_difference = np.arcsin(summed_radius_neigh / center_distance)
-            tangent_lines_neigh = ([Line(tangent_length, center_theta - theta_difference), Line(tangent_length, center_theta + theta_difference)])
-
-            lines = [tangent_lines[1][self.side], tangent_lines_neigh[(self.side+1)%2]]
-            radius = self.obstacles[2].radius
-            obstacle_distance = added_distance(lines, radius, self.side)
-
-            if cur_triplet_dist + obstacle_distance < snake_length:
-                ob_dict[ob] = obstacle_distance
-        return ob_dict  # dictionary of {Obstacle: required snake length}
-
-def triplet_distance(lines, radius, s):
-    path_length = 0
-    for line in lines:
-        path_length += line.length
-
-    theta = lines[0].angle_to_line(lines[1])
-    if (theta <= 0) == ((s % 2) == 0):  # OUTSIDE
-        path_length += radius*abs(theta)
-    else:  # INSIDE
-        theta = abs(theta)
-        # This code finds a point on the middle of the arch between the points where the two tangent lines intersects with the circle.
-        # Then it finds the distances from the endpoints to the point on the arch, and adds these to the path_length. Then it subtracts the length of the tangent lines from
-        # path_length, as these are added earlier in the code. (See picture on google drive)
-        a = np.sqrt((radius * (1 - np.cos(theta/2))) ** 2 + (lines[0].length - radius*np.sin(theta/2)) ** 2)
-        b = np.sqrt((radius*np.cos(theta) + lines[1].length*np.cos(theta-np.pi/2)-radius*np.cos(theta/2)) ** 2 + (radius*np.sin(theta)+lines[1].length*np.sin(theta-np.pi/2)-radius*np.sin(theta/2)) ** 2)
-        path_length += (a+b) - (lines[0].length + lines[1].length)
-
-    return path_length
-
-def added_distance(lines, radius, s):
-    path_length = lines[-1].length
-
-    theta = lines[0].angle_to_line(lines[1])
-    if (theta <= 0) == ((s % 2) == 0):  # OUTSIDE
-        path_length += radius*abs(theta)
-    else:  # INSIDE
-        theta = abs(theta)
-        # This code finds a point on the middle of the arch between the points where the two tangent lines intersects with the circle.
-        # Then it finds the distances from the endpoints to the point on the arch, and adds these to the path_length. Then it subtracts the length of the tangent lines from
-        # path_length, as these are added earlier in the code. (See picture on google drive)
-        a = np.sqrt((radius * (1 - np.cos(theta/2))) ** 2 + (lines[0].length - radius*np.sin(theta/2)) ** 2)
-        b = np.sqrt((radius*np.cos(theta) + lines[1].length*np.cos(theta-np.pi/2)-radius*np.cos(theta/2)) ** 2 + (radius*np.sin(theta)+lines[1].length*np.sin(theta-np.pi/2)-radius*np.sin(theta/2)) ** 2)
-        path_length += (a+b) - (lines[0].length + lines[1].length)
-
-    return path_length
-
-def find_start_end_points(goal_ob, tangent, side):
-    radial_theta = line.angle + math.pi/2 if side == 1 else line.angle - math.pi/2
-    end_x = goal_ob.x + goal_ob.radius * np.cos(radial_theta)
-    end_y = goal_ob.y + goal_ob.radius * np.sin(radial_theta)
-
-    start_x = end_x - line.length * np.cos(line.angle)
-    start_y = end_y - line.length * np.sin(line.angle)
-    return Point(start_x, start_y), Point(end_x, end_y)
-
+### Cost calculation ###
 def cost_to_move(current_wp, next_wp, current_triplet, next_obstacle, distance):
     cost = 0
     cost += distance
@@ -255,21 +44,25 @@ def heuristic_cost(wp, obstacle):
 def distance_to_path(obstacle, wp1, wp2):
     return np.abs((wp2.y - wp1.y) * obstacle.x - (wp2.x - wp1.x) * obstacle.y + wp2.x * wp1.y - wp2.y * wp1.x) / wp1.distance_to(wp2)
 
+### Unknown environment stuff ###
 def filter_queue(queue, newActive, prevActive):
     newqueue = []  # Open set
     while queue:
         triplet = heappop(queue)
         current = triplet
         "Follow the triplets parents until you reach the previously active node"
+        print("Previous active:", prevActive)
         try:
             # TODO current sometimes becomes init_triplet
-            while current.parent.obstacles[2] != prevActive:
+            print("Current:", current)
+            print("Par:", current.parent.obstacles[2])
+            while current.parent is not None and current.parent.obstacles[2] != prevActive:
                 current = current.parent
 
         except AttributeError:
             print("Attribute error in filter_queue")
             print("Current: " + str(current))
-            print("Parent: " + current.parent)
+            print("Parent: " + str(current.parent))
             exit(1)
         "Is the new active in the path?"
         if current.obstacles[2] == newActive:
@@ -286,6 +79,7 @@ def new_active(endTriplet, activeObstacle):
         current = current.parent
     return current
 
+### More or less standard A* ###
 def create_path(final_node):
     path = deque()
     current = final_node
@@ -403,7 +197,6 @@ def path_to_wp(waypoints, wp_index, init_triplet, env, wp_radii, fig=None, neigh
     plt.ioff()
     return current
 
-
 def add_neighbors_to_queue(init_triplet, current, queue, visited, seen,previous_wp, wp, neighbour_func, deadends):
     possibilities = neighbour_func(current, current.obstacles[2].neighbours, env.snake_len)
     for obstacle, distance in possibilities.items():
@@ -451,9 +244,9 @@ def plot_visited(env, visited):
     plt.ioff()
 
 if __name__ == "__main__":
-    env = e.Environment(200,200,50,75, radius_func=lambda: np.random.rand() * 3 + 1, snake_len=50)
-    env.save("env")
-    # env = e.Environment.load("env")
+    # env = e.Environment(200,200,100,150, radius_func=lambda: np.random.rand() * 3 + 1, snake_len=50)
+    # env.save("env")
+    env = e.Environment.load("env")
     points = create_desired_path(env,3)
     path2 = path_finder(points, None, env.init_triplet, env, 30, lambda c, n, s: c.quadruplet_distance_stupid(n, s))
     """
