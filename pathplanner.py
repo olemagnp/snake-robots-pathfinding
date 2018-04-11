@@ -262,6 +262,7 @@ def filter_queue(queue, newActive, prevActive):
         current = triplet
         "Follow the triplets parents until you reach the previously active node"
         try:
+            # TODO current sometimes becomes init_triplet
             while current.parent.obstacles[2] != prevActive:
                 current = current.parent
 
