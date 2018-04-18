@@ -75,3 +75,24 @@ def plot_active_segment(previous_wp, wp, color, radii, path=None, fig=None):
     fig = plot_waypoints([previous_wp, wp], color, radii, fig)
     fig = plot_path(path, fig)
     return fig
+
+def plot_path_with_side(tangentLines, obstacles, side):
+    xi_list = []
+    yi_list = []
+    for i in range(len(tangentLines)):
+        s = (side + i)%2
+        r_theta = tangentLines[i][s].angle + (-1)**s * np.pi/2
+        x_start = obstacles[i].x + np.cos(r_theta) * obstacles[i].radius
+        y_start = obstacles[i].y + np.sin(r_theta) * obstacles[i].radius
+
+        xi = [x_start + np.cos(tangentLines[i][s].angle)*tangentLines[i][s].length / 4 * t for t in range(5)]
+        yi = [y_start + np.sin(tangentLines[i][s].angle)*tangentLines[i][s].length / 4 * t for t in range(5)]
+
+        xi_list.append(xi)
+        yi_list.append(yi)
+
+    fig = plt.figure()
+    for i in range(xi_list):
+        plt.plot(xi,yi)
+    return fig
+
